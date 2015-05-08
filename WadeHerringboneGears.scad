@@ -7,42 +7,85 @@
 include <MCAD/involute_gears.scad> 
 include <MCAD/teardrop.scad> 
 
-//Set to 1 to render gears as cylinders instead
+/*************************\
+ * General Configuration *
+\*************************/
+
+/* Set to 1 to render gears as cylinders instead,
+ * Will speed up rendering for experimenting with decorations.
+ */
 debug = 1;
 
-//Set to 0 to render, set to 1 to print
-printing = 0;
-
-/*
- * PARAMETERS
+/* Set to 0 to render the gears interlocked,
+ * or 1 to render them seperately for easy printing.
  */
+printing = 0;
  
-//Copy this from your wade extruder
+/* Distance between the midpoints of the two gears
+ * Copy this from your extruders' information.
+ */
 distance_between_axles = 41.7055;
 
-//Parameters for both gears
+/* Height of the actual gear teeth
+ */
 gear_height = 10; //Height of the actual gears
-teeth_twist = 1; //Twist (how slanted the herringbones are)
-chamfer_gradient = 1; //Gradient of the chamfered edges, set to -1 to disable
 
-//Gear 1 is small gear (the one that pops on your stepper)
-//Gear 1 (small gear, stepper gear) specific parameters
+/* Gear "twist": how slanted the gears are.
+ * A value of 1 means each tooth will slant up one additional tooth.
+ */
+teeth_twist = 1;
+
+/* Chamfer gradient, tan(45) degrees works nicely.
+ * Use -1 to disable chamferred edges.
+ */
+chamfer_gradient = tan(45);
+
+/****************************\
+ * Small gear configuration *
+\****************************/
+
+/* Number of teeth on the gear */
 gear1_teeth = 9;
+
+/* Height of the base (for the setscrew) */
 gear1_base_height = 8;
+
+/* Shaft diameter
+ * Be sure to add some tolerance for printer error
+ */
 gear1_shaft_diameter = 5 + 0.4;
+/* Set-screw diameter, mind tolerance */
 gear1_setscrew_diameter = 3 + 0.4;
-gear1_setnut_diameter = 5.5 + 0.4; //Width across flats
+/* Set-nut width, measured across the flat sides,
+ * mind tolerance
+ */
+gear1_setnut_width = 5.5 + 0.4;
+/* Set-nut height, mind tolerance */
 gear1_setnut_height = 2.4 + 0.2;
 
-//Gear 2 (big gear) specific parameters
+/**************************\
+ * Big gear configuration *
+\**************************/
+/* Number of teeth */
 gear2_teeth = 47;
+/* Extra size of the outer rim */
 gear2_outer_thickness = 5;
 
+/* Shaft diameter
+ * Be sure to add some tolerance for printer error
+ */
 gear2_shaft_diameter = 8 + 0.4;
 gear2_shaft_height = 16;
+
 gear2_middle_diameter = 25;
 gear2_middle_rounding = 2;
+
+/* Shaft nut width, measured across the flat sides,
+ * mind tolerance
+ */
 gear2_nut_diameter = 13 + 0.4;
+
+/* Depth that the nut should be sunk inside the holder */
 gear2_nut_sunk = 6.5;
 
 decoration_height = gear_height/3;
@@ -67,12 +110,14 @@ module gear2_decoration(outer_radius, inner_radius, max_height) {
 //Distance to overlap things.
 epsilon = 0.01;
 
-/*
- * CALCULATIONS
- */
-cp = 360*distance_between_axles/(gear1_teeth+gear2_teeth);
+/********************\
+ * Pre-calculations *
+\********************/
+circular_pitch = 360*distance_between_axles/(gear1_teeth+gear2_teeth);
 
-//Functions
+/********************\
+ * Helper functions *
+\********************/
 function gear_radius(number_of_teeth, circular_pitch) = number_of_teeth * circular_pitch / 360;
 
 function gear_outer_radius(number_of_teeth, circular_pitch) = gear_radius(number_of_teeth=number_of_teeth, circular_pitch=circular_pitch) + (circular_pitch/180);
@@ -126,9 +171,9 @@ module hole(h,r,$fn=8,rot=0) {
 
 module gear1() {
     //Variables
-    radius = gear_radius(gear1_teeth, cp);
-    inner_radius = gear_inner_radius(gear1_teeth, cp);
-    outer_radius = gear_outer_radius(gear1_teeth, cp);
+    radius = gear_radius(gear1_teeth, circular_pitch);
+    inner_radius = gear_inner_radius(gear1_teeth, circular_pitch);
+    outer_radius = gear_outer_radius(gear1_teeth, circular_pitch);
     base_chamfer = (outer_radius - radius) / chamfer_gradient;
     shaft_radius = gear1_shaft_diameter/2;
     setnut_distance = shaft_radius;//(shaft_radius + radius - gear1_setnut_height)/2;
@@ -136,7 +181,7 @@ module gear1() {
     difference() {
         union() {
             //Actual gear
-            chamfered_herring_gear(height = gear_height, chamfer_gradient = chamfer_gradient, teeth_twist=teeth_twist,     number_of_teeth=gear1_teeth, circular_pitch=cp);
+            chamfered_herring_gear(height = gear_height, chamfer_gradient = chamfer_gradient, teeth_twist=teeth_twist,     number_of_teeth=gear1_teeth, circular_pitch=circular_pitch);
             //Base
             translate([0,0,-gear1_base_height]) {
                 cylinder(h=gear1_base_height + epsilon, r=inner_radius);
@@ -157,27 +202,27 @@ module gear1() {
             rotate([0,-90,0]) {
                 hole(h=outer_radius + epsilon, r=gear1_setscrew_diameter/2, $fn=8, rot=1);
                 translate([0,0,setnut_distance])
-                    hole(h=gear1_setnut_height, r=gear1_setnut_diameter/2, $fn=6);
+                    hole(h=gear1_setnut_height, r=gear1_setnut_width/2, $fn=6);
             }
         }
         //Setscrew insertion cube
-        translate([-setnut_distance-gear1_setnut_height,-gear1_setnut_diameter/2,-gear1_base_height-epsilon])
-            cube([gear1_setnut_height, gear1_setnut_diameter, gear1_base_height/2 + epsilon]);
+        translate([-setnut_distance-gear1_setnut_height,-gear1_setnut_width/2,-gear1_base_height-epsilon])
+            cube([gear1_setnut_height, gear1_setnut_width, gear1_base_height/2 + epsilon]);
         
     }
     
 }
 
 module gear2() {
-    radius = gear_radius(gear2_teeth, cp);
-    inner_radius = gear_inner_radius(gear2_teeth, cp);
-    outer_radius = gear_outer_radius(gear2_teeth, cp);
+    radius = gear_radius(gear2_teeth, circular_pitch);
+    inner_radius = gear_inner_radius(gear2_teeth, circular_pitch);
+    outer_radius = gear_outer_radius(gear2_teeth, circular_pitch);
     inner_chamfer_radius = (outer_radius - radius);
     inner_chamfer = inner_chamfer_radius / chamfer_gradient;
     
     //Outer gear
     difference() {
-        chamfered_herring_gear(height = gear_height, chamfer_gradient = chamfer_gradient,teeth_twist=-teeth_twist, number_of_teeth=gear2_teeth, circular_pitch=cp);
+        chamfered_herring_gear(height = gear_height, chamfer_gradient = chamfer_gradient,teeth_twist=-teeth_twist, number_of_teeth=gear2_teeth, circular_pitch=circular_pitch);
         
         translate([0,0,-epsilon])
             cylinder(h=gear_height+ 2*epsilon, r=inner_radius - gear2_outer_thickness);
