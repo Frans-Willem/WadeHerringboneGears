@@ -10,6 +10,9 @@ include <MCAD/teardrop.scad>
 //Set to 1 to render gears as cylinders instead
 debug = 1;
 
+//Set to 0 to render, set to 1 to print
+printing = 0;
+
 /*
  * PARAMETERS
  */
@@ -20,7 +23,7 @@ distance_between_axles = 41.7055;
 //Parameters for both gears
 gear_height = 10; //Height of the actual gears
 teeth_twist = 1; //Twist (how slanted the herringbones are)
-chamfer_gradient = 1; //Gradient of the chamfered edges
+chamfer_gradient = 1; //Gradient of the chamfered edges, set to -1 to disable
 
 //Gear 1 is small gear (the one that pops on your stepper)
 //Gear 1 (small gear, stepper gear) specific parameters
@@ -36,14 +39,33 @@ gear2_teeth = 47;
 gear2_outer_thickness = 5;
 
 gear2_shaft_diameter = 8 + 0.4;
-gear2_shaft_height = 14;
+gear2_shaft_height = 16;
 gear2_middle_diameter = 25;
-gear2_nut_diameter = 13; //No tolerance on this one.
-gear2_nut_sunk = 6;
+gear2_middle_rounding = 2;
+gear2_nut_diameter = 13 + 0.4;
+gear2_nut_sunk = 6.5;
+
+decoration_height = gear_height/3;
+
+module gear2_decoration(outer_radius, inner_radius, max_height) {
+    //gear2_decorate_full(outer_radius);
+    //gear2_decorate_spokes(outer_radius, 5);
+    //gear2_decorate_arcs(inner_radius, outer_radius, 5);
+    //gear2_decorate_spiral1(inner_radius, outer_radius, 5);
+    gear2_decorate_spiral2(inner_radius, outer_radius, 5);
+    //gear2_decorate_arrows(inner_radius, outer_radius, 5);
+    //gear2_decorate_drops(inner_radius, outer_radius, 5);
+    //gear2_decorate_holes(inner_radius, outer_radius, 5);
+    //gear2_decorate_flower(inner_radius, outer_radius, 7);
+    //gear2_decorate_segments(inner_radius, outer_radius, 3);
+    
+    //Modifiers
+    gear2_decorate_extra_outer_margin(outer_radius, 1);
+}
 
 
 //Distance to overlap things.
-epsilon = 0.1;
+epsilon = 0.01;
 
 /*
  * CALCULATIONS
@@ -109,7 +131,7 @@ module gear1() {
     outer_radius = gear_outer_radius(gear1_teeth, cp);
     base_chamfer = (outer_radius - radius) / chamfer_gradient;
     shaft_radius = gear1_shaft_diameter/2;
-    setnut_distance = (shaft_radius + radius - gear1_setnut_height)/2;
+    setnut_distance = shaft_radius;//(shaft_radius + radius - gear1_setnut_height)/2;
     
     difference() {
         union() {
@@ -150,6 +172,8 @@ module gear2() {
     radius = gear_radius(gear2_teeth, cp);
     inner_radius = gear_inner_radius(gear2_teeth, cp);
     outer_radius = gear_outer_radius(gear2_teeth, cp);
+    inner_chamfer_radius = (outer_radius - radius);
+    inner_chamfer = inner_chamfer_radius / chamfer_gradient;
     
     //Outer gear
     difference() {
@@ -157,11 +181,19 @@ module gear2() {
         
         translate([0,0,-epsilon])
             cylinder(h=gear_height+ 2*epsilon, r=inner_radius - gear2_outer_thickness);
+        
+        translate([0,0,gear_height - inner_chamfer - epsilon])
+            cylinder(h=inner_chamfer + 2*epsilon, r1=inner_radius - gear2_outer_thickness - chamfer_gradient*epsilon, r2 = inner_radius - gear2_outer_thickness + inner_chamfer_radius + chamfer_gradient*epsilon);
     }
+    
+    
     //Shaft holder
     difference() {
         union() {
-            cylinder(h=gear2_shaft_height, r=gear2_middle_diameter/2);
+            cylinder(h=gear2_shaft_height-gear2_middle_rounding, r=gear2_middle_diameter/2);
+            translate([0,0,gear2_shaft_height-gear2_middle_rounding])
+                scale([1,1,gear2_middle_rounding / gear2_middle_diameter * 2])
+                    sphere(r=gear2_middle_diameter/2);
             intersection() {
                 gear2_decoration(outer_radius = inner_radius - gear2_outer_thickness, inner_radius = gear2_middle_diameter/2, max_height = gear2_shaft_height);
                 cylinder(h=gear2_shaft_height, r=inner_radius);
@@ -174,28 +206,19 @@ module gear2() {
     }
 }
 
-module gear2_decoration(outer_radius, inner_radius, max_height) {
-    //gear2_decorate_full(outer_radius);
-    //gear2_decorate_spokes(outer_radius, 5);
-    //gear2_decorate_arcs(inner_radius, outer_radius, 5);
-    //gear2_decorate_spiral(inner_radius, outer_radius, 5);
-    //gear2_decorate_arrows(inner_radius, outer_radius, 5);
-    gear2_decorate_drops(inner_radius, outer_radius);
-}
-
 module gear2_decorate_full(outer_radius) {
-    cylinder(h=gear_height/4, r=outer_radius + epsilon);
+    cylinder(h=decoration_height, r=outer_radius + epsilon);
 }
 
 module gear2_decorate_spokes(outer_radius, number) {
     for (r=[0:360/number:360])
         rotate([0,0,r])
             rotate([90,0,0])
-                cylinder(h=outer_radius + epsilon, r=gear_height/2);
+                cylinder(h=outer_radius + epsilon, r=decoration_height);
 }
 
 module gear2_decorate_arcs(inner_radius, outer_radius, number) {
-    height = gear_height/3;
+    height = decoration_height;
     width = 5;
     inner_diameter = outer_radius - inner_radius;
     outer_diameter = inner_diameter + width*2;
@@ -211,8 +234,8 @@ module gear2_decorate_arcs(inner_radius, outer_radius, number) {
                 }
 }
 
-module gear2_decorate_spiral(inner_radius, outer_radius, number) {
-    height = gear_height/3;
+module gear2_decorate_spiral1(inner_radius, outer_radius, number) {
+    height = decoration_height;
     width = 5;
     inner_diameter = outer_radius;
     outer_diameter = inner_diameter + width*2;
@@ -228,8 +251,26 @@ module gear2_decorate_spiral(inner_radius, outer_radius, number) {
                 }
 }
 
+module gear2_decorate_spiral2(inner_radius, outer_radius, number) {
+    height = decoration_height;
+    width = 5;
+    outer_diameter = inner_radius + outer_radius + width;
+    inner_diameter = outer_diameter - (2*width);
+    middle = (outer_radius + width - inner_radius)/2;
+    for (r=[0:360/number:360])
+        rotate([0,0,r])
+            translate([middle,0,0])
+                difference() {
+                    cylinder(h=height, r=outer_diameter/2);
+                    translate([0,0,-epsilon])
+                        cylinder(h=height + 2*epsilon, r=inner_diameter/2);
+                    translate([-outer_diameter/2 - epsilon,0,-epsilon])
+                        cube([outer_diameter+2*epsilon,outer_diameter+2*epsilon,height + 2*epsilon]);
+                }
+}
+
 module gear2_decorate_arrows(inner_radius, outer_radius, number) {
-    height = gear_height/3;
+    height = decoration_height;
     width = 10;
     diff = outer_radius-inner_radius;
     inner_size = sqrt((diff*diff)/2);
@@ -249,14 +290,89 @@ module gear2_decorate_arrows(inner_radius, outer_radius, number) {
                 }
 }
 
-module gear2_decorate_drops(inner_radius, outer_radius) {
+module gear2_decorate_drops(inner_radius, outer_radius, number) {
+    size = (outer_radius - inner_radius) - 2;
+    height = decoration_height;
+    difference() {
+        gear2_decorate_full(outer_radius);
+        for (r=[0:360/number:360])
+            rotate([0,0,r])
+                translate([0,(inner_radius + outer_radius)/2,height/2])
+                    rotate([0,90,0])
+                        teardrop(size/2, height + epsilon*2, 90);
+    }
+}
+
+module gear2_decorate_holes(inner_radius, outer_radius, number) {
+    size = (outer_radius - inner_radius) - 2;
+    height = decoration_height;
+    difference() {
+        gear2_decorate_full(outer_radius);
+        for (r=[0:360/number:360])
+            rotate([0,0,r])
+                translate([0,(inner_radius + outer_radius)/2,-epsilon])
+                    cylinder(h=height+2*epsilon, r=size/2);
+    }
+}
+
+module gear2_decorate_flower(inner_radius, outer_radius, number) {
+    //Similar to triffid_hunters design
+    spacing = 1;
+    size = (outer_radius - inner_radius) - 2*spacing;
+    radius = size * (sqrt(2) - 1);
+    smallradius = 3;
+    height = decoration_height;
+    difference() {
+        gear2_decorate_full(outer_radius);
+        //Petals
+        for (r=[0:360/number:360])
+            rotate([0,0,r])
+                translate([inner_radius + spacing + radius,0,height/2])
+                    rotate([0,90,0])
+                        teardrop(radius, height + epsilon*2, 90);
+        // Motor access holes
+        for (r=[0:360/number:360])
+            rotate([0,0,r + 180/number])
+                translate([outer_radius - spacing - smallradius,0,height/2])
+                    rotate([0,-90,90])
+                        teardrop(smallradius, height + epsilon*2, 90);
+    }
+}
+
+module gear2_decorate_segments(inner_radius, outer_radius, number) {
+    degree = 180 / number;
+    height = decoration_height;
+    for (r=[0:360/number:360])
+        rotate([0,0,r])
+            intersection() {
+                translate([0,-outer_radius-epsilon,0])
+                    cube([outer_radius + epsilon,(outer_radius + epsilon)*2,height]);
+                rotate([0,0,180 - degree])
+                    translate([0,-outer_radius-epsilon,0])
+                        cube([outer_radius + epsilon,(outer_radius + epsilon)*2,height]);
+            }
+}
+module gear2_decorate_extra_outer_margin(outer_radius, width) {
+    difference() {
+        gear2_decorate_full(outer_radius);
+        translate([0,0,-epsilon])
+            cylinder(r=outer_radius - width, h=decoration_height + 2*epsilon);
+    }
     
 }
 
-//Small gear (gear 1)
-gear1();
+if (printing == 1) {
+    translate([distance_between_axles/2 + 5,0,gear_height])
+        rotate([0,180,0])
+            gear1();
+    translate([-distance_between_axles/2 - 5,0,0])
+        gear2();
+} else {
+    //Small gear (gear 1)
+    gear1();
 
-//Big gear (gear 2)
-translate([distance_between_axles,0,0]) {
-    gear2();
+    //Big gear (gear 2)
+    translate([distance_between_axles,0,0]) {
+        gear2();
+    }
 }
