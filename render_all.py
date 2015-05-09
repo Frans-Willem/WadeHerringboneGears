@@ -57,4 +57,5 @@ for render in renders:
 	for key, value in render["constants"].items():
 		cmdline += ["-D",key+"="+str(value)]
 	cmdline += ["WadeHerringboneGears.scad"]
+	print("Rendering herringbonegears" + render["name"] + "...")
 	subprocess.call(cmdline)
