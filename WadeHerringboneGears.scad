@@ -115,7 +115,7 @@ gear2_nut_diameter = 13 + 0.4;
 gear2_nut_sunk = 6.5;
 
 /* Which decorations to use */
-gear2_decoration_full = false;
+gear2_decoration_solid = false;
 gear2_decoration_spokes = 0; //Set to number of desired spokes
 gear2_decoration_arcs = 0; //Set to number of desired arcs
 gear2_decoration_spiral1 = 0; //Set to number of desired spirals (style 1)
@@ -125,68 +125,10 @@ gear2_decoration_drops = 0; //Set to number of desired drops
 gear2_decoration_holes = 0; //Set to number of desired holes
 gear2_decoration_flower = 0; //Set to number of petals (7 is nice)
 gear2_decoration_segments = 0; //Set to number of desired segments
-gear2_decoration_extra_margin = 1; //Number of millimeters
+gear2_decoration_extra_margin = 0; //Number of millimeters
 
 /* Height of decoration */
 gear2_decoration_height = gear_height/3;
-
-module gear2_decoration(outer_radius, inner_radius, max_height) {
-    if (gear2_decoration_full)
-        gear2_decorate_full(outer_radius);
-    if (gear2_decoration_spokes > 0)
-        gear2_decorate_spokes(
-            outer_radius,
-            gear2_decoration_spokes);
-    if (gear2_decoration_arcs > 0)
-        gear2_decorate_arcs(
-            inner_radius,
-            outer_radius,
-            gear2_decoration_arcs);
-    if (gear2_decoration_spiral1 > 0)
-        gear2_decorate_spiral1(
-            inner_radius,
-            outer_radius,
-            gear2_decoration_spiral1);
-    if (gear2_decoration_spiral2 > 0)
-        gear2_decorate_spiral2(
-            inner_radius,
-            outer_radius,
-            gear2_decoration_spiral2);
-    if (gear2_decoration_arrows > 0)
-        gear2_decorate_arrows(
-            inner_radius,
-            outer_radius,
-            gear2_decoration_arrows);
-    if (gear2_decoration_drops)
-        gear2_decorate_drops(
-            inner_radius,
-            outer_radius,
-            gear2_decoration_drops);
-    if (gear2_decoration_holes)
-        gear2_decorate_holes(
-            inner_radius,
-            outer_radius,
-            gear2_decoration_holes);
-    if (gear2_decoration_flower > 0)
-        gear2_decorate_flower(
-            inner_radius,
-            outer_radius,
-            gear2_decoration_flower);
-    if (gear2_decoration_segments > 0)
-        gear2_decorate_segments(
-            inner_radius,
-            outer_radius,
-            gear2_decoration_segments);
-    
-    if (gear2_decoration_extra_margin > 0)
-        gear2_decorate_extra_outer_margin(
-            outer_radius,
-            gear2_decoration_extra_margin);
-}
-
-
-//Distance to overlap things.
-epsilon = 0.01;
 
 /********************\
  * Pre-calculations *
@@ -196,6 +138,9 @@ circular_pitch = 360*distance_between_axles/(gear1_teeth+gear2_teeth);
 /********************\
  * Helper functions *
 \********************/
+//Distance to overlap things that should be joined.
+epsilon = 0.01;
+
 function gear_radius(number_of_teeth, circular_pitch) = number_of_teeth * circular_pitch / 360;
 
 function gear_outer_radius(number_of_teeth, circular_pitch) = gear_radius(number_of_teeth=number_of_teeth, circular_pitch=circular_pitch) + (circular_pitch/180);
@@ -318,7 +263,11 @@ module gear2() {
                 scale([1,1,gear2_middle_rounding / gear2_middle_diameter * 2])
                     sphere(r=gear2_middle_diameter/2);
             intersection() {
-                gear2_decoration(outer_radius = inner_radius - gear2_outer_thickness, inner_radius = gear2_middle_diameter/2, max_height = gear2_shaft_height + gear2_nut_sunk);
+                union() {
+                    gear2_decoration(outer_radius = inner_radius - gear2_outer_thickness, inner_radius = gear2_middle_diameter/2, max_height = gear2_shaft_height + gear2_nut_sunk);
+                    //Something that will be cut out anyway
+                    cylinder(h=gear2_shaft_height + gear2_nut_sunk, r=gear2_shaft_diameter/4);
+                }
                 cylinder(h=gear2_shaft_height + gear2_nut_sunk, r=inner_radius);
             }
         }
@@ -329,7 +278,61 @@ module gear2() {
     }
 }
 
-module gear2_decorate_full(outer_radius) {
+module gear2_decoration(outer_radius, inner_radius, max_height) {
+    if (gear2_decoration_solid)
+        gear2_decorate_solid(outer_radius);
+    if (gear2_decoration_spokes > 0)
+        gear2_decorate_spokes(
+            outer_radius,
+            gear2_decoration_spokes);
+    if (gear2_decoration_arcs > 0)
+        gear2_decorate_arcs(
+            inner_radius,
+            outer_radius,
+            gear2_decoration_arcs);
+    if (gear2_decoration_spiral1 > 0)
+        gear2_decorate_spiral1(
+            inner_radius,
+            outer_radius,
+            gear2_decoration_spiral1);
+    if (gear2_decoration_spiral2 > 0)
+        gear2_decorate_spiral2(
+            inner_radius,
+            outer_radius,
+            gear2_decoration_spiral2);
+    if (gear2_decoration_arrows > 0)
+        gear2_decorate_arrows(
+            inner_radius,
+            outer_radius,
+            gear2_decoration_arrows);
+    if (gear2_decoration_drops)
+        gear2_decorate_drops(
+            inner_radius,
+            outer_radius,
+            gear2_decoration_drops);
+    if (gear2_decoration_holes)
+        gear2_decorate_holes(
+            inner_radius,
+            outer_radius,
+            gear2_decoration_holes);
+    if (gear2_decoration_flower > 0)
+        gear2_decorate_flower(
+            inner_radius,
+            outer_radius,
+            gear2_decoration_flower);
+    if (gear2_decoration_segments > 0)
+        gear2_decorate_segments(
+            inner_radius,
+            outer_radius,
+            gear2_decoration_segments);
+    
+    if (gear2_decoration_extra_margin > 0)
+        gear2_decorate_extra_outer_margin(
+            outer_radius,
+            gear2_decoration_extra_margin);
+}
+
+module gear2_decorate_solid(outer_radius) {
     cylinder(h=gear2_decoration_height, r=outer_radius + epsilon);
 }
 
@@ -417,7 +420,7 @@ module gear2_decorate_drops(inner_radius, outer_radius, number) {
     size = (outer_radius - inner_radius) - 2;
     height = gear2_decoration_height;
     difference() {
-        gear2_decorate_full(outer_radius);
+        gear2_decorate_solid(outer_radius);
         for (r=[0:360/number:360])
             rotate([0,0,r])
                 translate([0,(inner_radius + outer_radius)/2,height/2])
@@ -430,7 +433,7 @@ module gear2_decorate_holes(inner_radius, outer_radius, number) {
     size = (outer_radius - inner_radius) - 2;
     height = gear2_decoration_height;
     difference() {
-        gear2_decorate_full(outer_radius);
+        gear2_decorate_solid(outer_radius);
         for (r=[0:360/number:360])
             rotate([0,0,r])
                 translate([0,(inner_radius + outer_radius)/2,-epsilon])
@@ -446,7 +449,7 @@ module gear2_decorate_flower(inner_radius, outer_radius, number) {
     smallradius = 3;
     height = gear2_decoration_height;
     difference() {
-        gear2_decorate_full(outer_radius);
+        gear2_decorate_solid(outer_radius);
         //Petals
         for (r=[0:360/number:360])
             rotate([0,0,r])
@@ -477,7 +480,7 @@ module gear2_decorate_segments(inner_radius, outer_radius, number) {
 }
 module gear2_decorate_extra_outer_margin(outer_radius, width) {
     difference() {
-        gear2_decorate_full(outer_radius);
+        gear2_decorate_solid(outer_radius);
         translate([0,0,-epsilon])
             cylinder(r=outer_radius - width, h=gear2_decoration_height + 2*epsilon);
     }
